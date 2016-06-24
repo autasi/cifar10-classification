@@ -19,7 +19,7 @@ GRADIENT_CLIP_AVG_NORM = 0.2
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('training_num', 50000, """training number""")
+flags.DEFINE_integer('training_num', 40000, """training number""")
 flags.DEFINE_integer('valid_num', 10000, """validation number""")
 flags.DEFINE_integer('batch_size', 128, """Batch size""")
 flags.DEFINE_integer('val_batch_size', 64, """Validation batch size""")
@@ -176,15 +176,11 @@ def run_training():
                         _, lr, loss, error, summary_string = sess.run(
                             [train_op, learning_rate_op, loss_op,
                                 error_op, summary_op],
-                            feed_dict={X:thisX, Y:thisY,
-                                phase:'train'})
+                            feed_dict={X:thisX, Y:thisY, phase:'train'})
                     else:
                         _, lr, loss, error = sess.run(
                             [train_op, learning_rate_op, loss_op, error_op],
-                            feed_dict={X:thisX, Y:thisY,
-                                phase:'train'})
-                    if step%100==0:
-                        print (loss)
+                            feed_dict={X:thisX, Y:thisY, phase:'train'})
                 
                 t = time.time()-start_time
                 examples_per_sec = FLAGS.batch_size * training_steps / t
