@@ -16,12 +16,12 @@ INITIAL_LEARNING_RATE = 0.001
 LEARNING_RATE_DECAY = 0.9
 GRADIENT_CLIP_AVG_NORM = 0.2
 
-DROPOUT = 0.5
+DROPOUT = 0.75
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('training_num', 40000, """training number""")
+flags.DEFINE_integer('training_num', 50000, """training number""")
 flags.DEFINE_integer('valid_num', 10000, """validation number""")
 flags.DEFINE_integer('batch_size', 128, """Batch size""")
 flags.DEFINE_integer('val_batch_size', 64, """Validation batch size""")
@@ -29,10 +29,10 @@ flags.DEFINE_integer('max_epoch', 100, """Max epochs to run trainer""")
 flags.DEFINE_integer('display_interval', 1, """interval for display""")
 flags.DEFINE_integer('val_interval', 1, """interval for validation""")
 flags.DEFINE_integer('summary_interval', 1, """interval for summary""")
-flags.DEFINE_string('save_directory', '../results/0.5_large',
+flags.DEFINE_string('save_directory', '../results/0.75_en',
     """directory to save""")
 flags.DEFINE_string('checkpoint', None,
-    'if sets, resume training on the checkpoint')
+    """if sets, resume training on the checkpoint""")
 
 def loss_and_accuracy(logits, labels, phase):
     labels = tf.cast(labels, tf.int64)
@@ -211,13 +211,11 @@ def run_training():
                             _,val_loss,val_error,summary_string = sess.run(
                                     [valid_op, valid_loss_op, valid_error_op,
                                         summary_op],
-                                    feed_dict = {X:thisX,Y:thisY,
-                                        phase:'valid'})
+                                    feed_dict = {X:thisX, Y:thisY, phase:'valid'})
                         else:
                             _, val_loss, val_error = sess.run(
                                 [valid_op, valid_loss_op, valid_error_op],
-                                feed_dict = {X:thisX, Y:thisY,
-                                    phase:'valid'})
+                                feed_dict = {X:thisX, Y:thisY, phase:'valid'})
                         val_loss_sum += val_loss
                         val_error_sum += val_error
 

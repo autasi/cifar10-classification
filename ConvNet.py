@@ -118,7 +118,7 @@ class ConvNet(object):
 
         return _drop
 
-    def __init__(self, dropout = 0.5, hidden_dim = 1000, bn_mode = False):
+    def __init__(self, dropout = 0.5, hidden_dim = 600, bn_mode = False):
         self.weight_decay = WEIGHT_DECAY
         self.dropout = dropout
         self.hidden_dim = hidden_dim
@@ -131,10 +131,10 @@ class ConvNet(object):
             lambda: tf.Variable(1.0, trainable=False))
 
 
-        layer0 = self.ConvLayer(images, 3, 64, 0)
-        layer1 = self.ConvLayer(layer0, 64, 128, 1)
-        layer2 = self.ConvLayer(layer1, 128, 256, 2)
-        layer3 = self.ConvLayer(layer2, 256, 512, 3)
+        layer0 = self.ConvLayer(images, 3, 32, 0)
+        layer1 = self.ConvLayer(layer0, 32, 64, 1)
+        layer2 = self.ConvLayer(layer1, 64, 128, 2)
+        layer3 = self.ConvLayer(layer2, 128, 256, 3)
     
         # fc layer
         dim = 1
@@ -145,8 +145,6 @@ class ConvNet(object):
 
         fc1 = self._fc(nn_in, [dim, self.hidden_dim], name = 'fc1')
         drop_f1 = tf.nn.dropout(fc1, self.dropout)
-        fc2 = self._fc(drop_f1, [self.hidden_dim, self.hidden_dim], name = 'fc2')
-        drop_f2 = tf.nn.dropout(fc2, self.dropout)
-        fc3 = self._fc(drop_f2, [self.hidden_dim,10], name='fc3', last=True)
+        fc2 = self._fc(drop_f1, [self.hidden_dim,10], name='fc2', last=True)
 
-        return fc3
+        return fc2
