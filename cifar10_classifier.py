@@ -6,7 +6,7 @@ from six.moves import xrange
 from datetime import datetime
 import time, sys, select, math, cPickle, pickle, tarfile
 import tensorflow as tf, numpy as np
-from ConvNet import inference
+from ConvNet import ConvNet
 from cifar10_input_array import load
 
 MOVING_AVG_DECAY = 0.99
@@ -15,6 +15,8 @@ LEARNING_RATE_DECAY_FACTOR = 0.5
 INITIAL_LEARNING_RATE = 0.001
 LEARNING_RATE_DECAY = 0.9
 GRADIENT_CLIP_AVG_NORM = 0.2
+
+DROPOUT = 0.5
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -27,7 +29,8 @@ flags.DEFINE_integer('max_epoch', 100, """Max epochs to run trainer""")
 flags.DEFINE_integer('display_interval', 1, """interval for display""")
 flags.DEFINE_integer('val_interval', 1, """interval for validation""")
 flags.DEFINE_integer('summary_interval', 1, """interval for summary""")
-flags.DEFINE_string('save_directory', '../results', """directory to save""")
+flags.DEFINE_string('save_directory', '../results/0.5_large',
+    """directory to save""")
 flags.DEFINE_string('checkpoint', None,
     'if sets, resume training on the checkpoint')
 
@@ -80,28 +83,31 @@ def train(total_loss, lr, lr_decay, global_epoch):
 
 def run_training():
 
-    trainX, trainY, validX, validY, testX, testY = load(one_hot = False, cv = 1)
+    trainX, trainY, validX, validY = load(one_hot = False, cv = -1)
 
     mean = []
-    for shape in [trainX.shape, validX.shape, testX.shape]:
+    for shape in [trainX.shape, validX.shape]:
         mean.append(np.repeat(np.mean(trainX.transpose([3,0,1,2]).reshape(3,-1),axis=1),shape[0]*shape[1]*shape[2]).reshape(3,-1).transpose().reshape(shape[0],shape[1],shape[2],shape[3]))
         
     trainX = trainX - mean[0]
     validX = validX - mean[1]
-    testX = testX - mean[2]
+    #testX = testX - mean[2]
     
 
     with tf.Graph().as_default():
         
+        convNet = ConvNet(dropout = DROPOUT)
+
         global_epoch = tf.Variable(0, trainable=False)
         learning_rate = tf.Variable(INITIAL_LEARNING_RATE, trainable=False)
         learning_rate_decay = tf.Variable(LEARNING_RATE_DECAY, trainable=False)
-        
+        train_mode = tf.Variable(True, trainable=False)
+
         X = tf.placeholder("float", [FLAGS.batch_size, 28, 28, 3])
         Y = tf.placeholder("float", [FLAGS.batch_size])
         phase = tf.placeholder("string")
                  
-        logits = inference(X, FLAGS.batch_size, phase)
+        logits = convNet.inference(X, FLAGS.batch_size, train_mode)
         
         loss, cross_entropy_loss, accuracy = loss_and_accuracy(
                 logits, Y, phase=phase)
@@ -114,7 +120,6 @@ def run_training():
             valid_acc_op = accuracy
             valid_error_op = (1.-accuracy)*100.
             
-            
         with tf.control_dependencies([avg_op]):
             train_op = train(cross_entropy_loss, learning_rate,
                     learning_rate_decay, global_epoch)
@@ -122,7 +127,6 @@ def run_training():
             accuracy_op = accuracy
             error_op = (1.-accuracy)*100.
             learning_rate_op = learning_rate
-            
         
         summary_op = tf.merge_all_summaries()
 
@@ -141,7 +145,7 @@ def run_training():
             current_epoch = global_epoch.eval(sess)
 
             summary_writer = tf.train.SummaryWriter(
-                    FLAGS.save_directory + '/0.8_en',
+                    FLAGS.save_directory,
                     graph_def = sess.graph_def)
 
             best_error = 100.0
@@ -194,6 +198,8 @@ def run_training():
                     val_loss_sum = 0.0
                     val_error_sum = 0.0
                     valid_steps = int(FLAGS.valid_num / FLAGS.batch_size)
+                    sess.run(train_mode.assign(False))
+                    
                     start_time = time.time()
                     for v_step in xrange(valid_steps):
                         start = v_step * FLAGS.batch_size
@@ -225,8 +231,8 @@ def run_training():
                             %(epoch, val_loss, val_error, examples_per_sec))
                     
                     summary_writer.add_summary(summary_string, epoch)
+                    sess.run(train_mode.assign(True))
                                 
-                
                 if best_error > val_error:
                     best_error = val_error
                     bad_cnt = 0
